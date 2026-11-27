@@ -31,9 +31,7 @@ del grupo. Si falta algún dato, se advierte en la realimentación.
 
 | Nombre completo | Código | Correo institucional |
 |---|---|---|
-| | | |
-| | | |
-| | | |
+| Eliana Vanessa Cardona Burbano | 22507209 | eliana.cardona@uao.edu.co |
 
 ## Entrega
 
