@@ -52,9 +52,17 @@ Las ventanas se calculan sobre `z.shift(1)`: la fila $t$ solo ve hasta $t-1$.
 Se aprende `dif12` para quitar el ciclo anual del objetivo; la vuelta al nivel
 es $\hat y_t=y_{t-12}+\hat z_t$. La prueba de fuga cambia cada mes en $+1000$
 y verifica que su fila no cambia: el guion imprime `sin fuga: 120 filas
-verificadas una a una`. El pronóstico recursivo agrega cada mes predicho como
-si ya estuviera observado y reconstruye la última fila; el escalador se ajusta
-dentro de cada origen.
+verificadas una a una`.
+
+El pronóstico recursivo quedó corregido: en cada paso se agrega primero la
+fecha siguiente como NaN, se construye con esa fecha la fila de predictores,
+se predice su `dif12` y se reconstruye el nivel con el valor de esa misma fecha
+12 meses antes —la posición `-13` de la serie ya extendida—. Después se guarda
+el nivel pronosticado en la celda vacía y se continúa. La comprobación del guion
+es `recursivo: primera fila 2026-01 con rezago_1 de 2025-12 (5284.95) y nivel
+de 2025-01`: un origen en diciembre pronostica enero con el `rezago_1` de
+diciembre, no con el mes del origen. El escalador se ajusta dentro de cada
+origen.
 
 ## 3. Aprendizaje automático
 
@@ -79,13 +87,13 @@ junto con la estacionalidad y la dispersión reciente.
 
 | Modelo | RMSE | MAE | MAPE (%) |
 |---|---:|---:|---:|
-| KNN | 6268.06 | 5096.63 | 3.98 |
-| SVR | 7442.71 | 5994.77 | 4.73 |
-| Random Forest | 7855.69 | 6152.55 | 4.91 |
-| XGBoost | 8384.87 | 6700.04 | 5.25 |
+| KNN | 6296.25 | 5182.41 | 4.09 |
+| SVR | 7442.70 | 5994.77 | 4.73 |
+| Random Forest | 7213.29 | 5311.77 | 4.09 |
+| XGBoost | 8051.96 | 5909.21 | 4.52 |
 
 KNN gana entre los cuatro modelos de aprendizaje automático y también es el
-mejor de los nueve.
+mejor de los nueve en la nueva tabla.
 
 ## 4. Aprendizaje profundo
 
@@ -115,27 +123,25 @@ sube a 2.940. La MLP de 32 ocultas también tiene su mínimo en la época 1
 mientras la de validación termina en 2.698 y 3.125. Por eso se usó una época
 para la MLP, 37 para la LSTM y 21 para la Conv1D, y no las 150 completas.
 
-La mejor red por RMSE fue **Conv1D (8 canales), 21 épocas**, con 7444.15.
+La mejor red por RMSE fue **Conv1D (8 canales), 21 épocas**, con 6672.15.
 Sus cinco semillas:
 
 | Semilla | RMSE |
 |---:|---:|
-| 2026 | 7444.15 |
-| 7 | 7662.58 |
-| 13 | 7033.29 |
-| 42 | 7258.84 |
-| 123 | 6837.06 |
-| **Media** | **7247.18** |
-| **Desviación estándar** | **326.13** |
+| 2026 | 6672.15 |
+| 7 | 7069.65 |
+| 13 | 6255.06 |
+| 42 | 7923.24 |
+| 123 | 5875.44 |
+| **Media** | **6759.11** |
+| **Desviación estándar** | **789.64** |
 
-La variación entre semillas va de 6837.06 a 7662.58. Frente al SARIMAX
-(8300.63), la Conv1D de la tabla gana por 856.48 RMSE (10.3 %) y la media de
-las cinco gana por 1053.45 (12.7 %): ambas diferencias superan la desviación
-de 326.13 (2.6 y 3.2 veces). Frente al estacional ingenuo (6850.49), en cambio,
-la Conv1D de la tabla pierde por 593.66 y la media por 396.69; solo la semilla
-123 queda 13.43 por debajo, una diferencia dentro del ruido entre semillas.
-La ventaja sobre el clásico ajustado es estable, pero no la ventaja sobre lo
-simple.
+La variación entre semillas va de 5875.44 a 7923.24. Frente al SARIMAX
+(8300.63), la Conv1D de la tabla gana por 1628.48 RMSE (19.6 %) y la media de
+las cinco gana por 1541.52 (18.6 %): ambas diferencias superan la desviación
+de 789.64 (2.1 y 2.0 veces). Frente al estacional ingenuo (6850.49), la Conv1D
+de la tabla gana por 178.34 (2.6 %) y la media por 91.38 (1.3 %), márgenes
+mucho más pequeños que la variación entre semillas.
 
 ## 5. La tabla y la elección
 
@@ -143,15 +149,15 @@ simple.
 
 | Modelo | RMSE | MAE | MAPE (%) | Parámetros | Segundos |
 |---|---:|---:|---:|---:|---:|
-| KNN | 6268.06 | 5096.63 | 3.98 | 1512 | 9.9 |
-| estacional ingenuo | 6850.49 | 5686.72 | 4.49 | 0 | 0.0 |
-| SVR | 7442.71 | 5994.77 | 4.73 | 1585 | 7.9 |
-| Conv1D (8 canales), 21 épocas | 7444.15 | 5897.71 | 4.62 | 129 | 9.4 |
-| MLP (8 ocultas), 1 épocas | 7616.31 | 6081.03 | 4.78 | 185 | 7.8 |
-| Random Forest | 7855.69 | 6152.55 | 4.91 | 1234 | 18.1 |
-| LSTM (16 ocultas), 37 épocas | 8112.41 | 6499.33 | 5.17 | 1233 | 12.3 |
-| SARIMAX (0,1,0)(0,1,1)12 + días | 8300.63 | 6904.44 | 5.47 | 3 | 8.5 |
-| XGBoost | 8384.87 | 6700.04 | 5.25 | 2356 | 12.8 |
+| KNN | 6296.25 | 5182.41 | 4.09 | 1512 | 9.9 |
+| Conv1D (8 canales), 21 épocas | 6672.15 | 5434.12 | 4.30 | 129 | 9.0 |
+| estacional ingenuo | 6850.49 | 5686.72 | 4.49 | 0 | 0.1 |
+| Random Forest | 7213.29 | 5311.77 | 4.09 | 1234 | 17.5 |
+| SVR | 7442.70 | 5994.77 | 4.73 | 1585 | 7.6 |
+| MLP (8 ocultas), 1 épocas | 7563.09 | 6109.98 | 4.83 | 185 | 8.8 |
+| XGBoost | 8051.96 | 5909.21 | 4.52 | 2356 | 13.6 |
+| LSTM (16 ocultas), 37 épocas | 8270.40 | 6544.04 | 5.30 | 1233 | 11.9 |
+| SARIMAX (0,1,0)(0,1,1)12 + días | 8300.63 | 6904.44 | 5.47 | 3 | 8.2 |
 
 ![Pronósticos desde el último origen](../figuras/pronosticos.png)
 
@@ -176,22 +182,22 @@ replicado en `miniproyecto.py` sin tocar `comun.py`. Los archivos son
 
 | Modelo | Peor mes | Error medio absoluto (miles de MWh) | Orígenes |
 |---|---|---:|---:|
-| Conv1D (8 canales), 21 épocas | 2024-03 | 19504.80 | 3 |
-| KNN | 2025-02 | 12585.82 | 11 |
-| LSTM (16 ocultas), 37 épocas | 2025-02 | 16034.38 | 11 |
-| MLP (8 ocultas), 1 épocas | 2024-06 | 18601.37 | 6 |
-| Random Forest | 2025-02 | 17792.84 | 11 |
+| Conv1D (8 canales), 21 épocas | 2025-02 | 13301.54 | 11 |
+| KNN | 2024-06 | 12315.68 | 6 |
+| LSTM (16 ocultas), 37 épocas | 2025-02 | 15647.30 | 11 |
+| MLP (8 ocultas), 1 épocas | 2024-06 | 19729.94 | 6 |
+| Random Forest | 2025-02 | 16027.71 | 11 |
 | SARIMAX (0,1,0)(0,1,1)12 + días | 2024-01 | 16455.54 | 1 |
-| SVR | 2024-06 | 18747.22 | 6 |
-| XGBoost | 2024-01 | 23083.48 | 1 |
+| SVR | 2024-06 | 18747.18 | 6 |
+| XGBoost | 2024-06 | 17424.70 | 6 |
 | estacional ingenuo | 2024-06 | 17600.85 | 6 |
 
 El peor mes del SARIMAX, enero de 2024 con 16455.54 miles de MWh y un solo
-origen, coincide con el error con signo reportado en el Miniproyecto 1. En
-2024-03 las ventas caen de 115477.19 en febrero a 102203.04 en marzo y siguen
-bajando hasta 94674.02 en abril: la Conv1D falla más en ese cambio de pendiente.
-En 2025-02, con 11 orígenes, fallan KNN, LSTM y Random Forest; en 2024-06, con
-6, fallan MLP, SVR y el estacional ingenuo.
+origen, coincide con el error con signo reportado en el Miniproyecto 1. Después
+de corregir el desfase del pronóstico recursivo, cinco modelos tienen su peor
+mes en 2024-06: las ventas saltan de 107604.72 en mayo a 138920.46 en junio y
+siguen a 164833.25 en julio. Conv1D, LSTM y Random Forest fallan más en
+2025-02, cuando las ventas bajan de 152572.72 en enero a 127739.13 en febrero.
 
 ### Filas supervisadas y tamaño de las redes
 
@@ -208,28 +214,29 @@ tamaño de las redes: la pérdida de entrenamiento sigue cayendo mientras la de
 validación sube. En la MLP de 8 ocultas el entrenamiento pasa de 1.051 en la
 época 1 a 0.000 en la 150, y la validación de 1.379 a 2.940; en la Conv1D,
 de 0.387 a 0.016 y de 1.673 a 3.125; en la LSTM, de 0.445 a 0.015 y de 1.058
-a 2.698. La LSTM ajustó 1.233 parámetros con 72 filas supervisadas en el último origen. En el backtest, su RMSE fue de 8.112,41 miles de MWh, inferior al del SARIMAX (8.300,63) y superior al del estacional ingenuo (6.850,49).
+a 2.698. La LSTM, con 17 veces más parámetros que filas, queda incluso por
+encima del SARIMAX.
 
 ## 6. Conclusión
 
-Pondría en uso **KNN**: RMSE 6268.06, MAE 5096.63 y MAPE 3.98 %, el mejor de
-los nueve modelos. El RMSE de KNN es 24,5 % menor que el del SARIMAX (6268.06
-frente a 8300.63) y también es 8,5 % menor que el del estacional ingenuo;
-es el único modelo que baja claramente de la línea base simple. En CPU tarda
-9.9 s en los 13 orígenes, frente a 8.5 s del SARIMAX y 9.4 s de la Conv1D.
-El guion completo tarda 180 s. Necesita la tabla supervisada: 60 filas en el
-primer origen y 72 en el último, con 96 y 108 meses de historia
-respectivamente, y memoriza 1512 valores. El precio es la explicabilidad: no
-hay una ecuación de coeficientes, sino un promedio uniforme de los 9 vecinos
-más cercanos en el espacio estandarizado de 21 variables, porque
-`KNeighborsRegressor` se construye sin el argumento `weights` y usa su valor
-por defecto, `uniform`.
+La elección sale de la nueva tabla: pondría en uso **KNN**, con RMSE 6296.25,
+MAE 5182.41 y MAPE 4.09 %, el mejor de los nueve modelos. El RMSE de KNN es
+24,1 % menor que el del SARIMAX (6296.25 frente a 8300.63) y 8,1 % menor que
+el del estacional ingenuo; es el único modelo que baja claramente de la línea
+base simple. En CPU tarda 9.9 s en los 13 orígenes, frente a 8.2 s del SARIMAX
+y 9.0 s de la Conv1D. El guion completo tarda 183 s. Necesita la tabla
+supervisada: 60 filas en el primer origen y 72 en el último, con 96 y 108 meses
+de historia respectivamente, y memoriza 1512 valores. El precio es la
+explicabilidad: no hay una ecuación de coeficientes, sino un promedio uniforme
+de los 9 vecinos más cercanos en el espacio estandarizado de 21 variables,
+porque `KNeighborsRegressor` se construye sin el argumento `weights` y usa su
+valor por defecto, `uniform`.
 
 Mantendría el SARIMAX como respaldo auditable: 3 parámetros, exógena de días
-calendario y una ecuación que se puede comunicar, aunque su RMSE sea 2032.57
+calendario y una ecuación que se puede comunicar, aunque su RMSE sea 2004.38
 más alto que el de KNN y quede por encima del estacional ingenuo. La Conv1D
-mejora al clásico de forma estable entre semillas, pero no vence a lo simple
-en promedio y entrena con 72 filas frente a 129 parámetros. La decisión es
-usar KNN para el pronóstico puntual, vigilar el peor mes de cada modelo y
+también supera al clásico de forma estable entre semillas, y ahora supera a la
+línea simple por un margen menor que su variación entre semillas. La decisión
+es usar KNN para el pronóstico puntual, vigilar el peor mes de cada modelo y
 conservar el SARIMAX cuando el pronóstico deba explicarse coeficiente a
 coeficiente.
