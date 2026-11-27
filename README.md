@@ -1,4 +1,4 @@
-# Miniproyecto 2: aprendizaje automático y profundo contra el mejor modelo clásico
+# miniproyecto.py carga la serie mensual de ventas de electricidad residencial de Estados Unidos (2016–2025) y compara nueve modelos mediante el backtest común. El guion genera las figuras y las tablas que se analizan en docs/informe.md.
 
 Pronóstico de Series Temporales con IA · Universidad Autónoma de Occidente,
 2026-II · Carlos Andrés Delgado Saavedra
