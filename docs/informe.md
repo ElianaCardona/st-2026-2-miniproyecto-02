@@ -208,8 +208,7 @@ tamaño de las redes: la pérdida de entrenamiento sigue cayendo mientras la de
 validación sube. En la MLP de 8 ocultas el entrenamiento pasa de 1.051 en la
 época 1 a 0.000 en la 150, y la validación de 1.379 a 2.940; en la Conv1D,
 de 0.387 a 0.016 y de 1.673 a 3.125; en la LSTM, de 0.445 a 0.015 y de 1.058
-a 2.698. La LSTM, con 17 veces más parámetros que filas, queda incluso por
-encima del SARIMAX.
+a 2.698. La LSTM ajustó 1.233 parámetros con 72 filas supervisadas en el último origen. En el backtest, su RMSE fue de 8.112,41 miles de MWh, inferior al del SARIMAX (8.300,63) y superior al del estacional ingenuo (6.850,49).
 
 ## 6. Conclusión
 
