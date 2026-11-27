@@ -124,8 +124,12 @@ def objetivo(y):
 
 
 def a_nivel(y, z):
-    """Del pronóstico del objetivo al nivel: y(t) = y(t-12) + z(t) si z es la diferencia."""
-    return y.iloc[-PERIODO] + z if OBJETIVO == "dif12" else z
+    """Del pronóstico del objetivo al nivel: y(t) = y(t-12) + z(t).
+
+    `y` ya incluye la fecha objetivo t como última celda (NaN), así que
+    t-12 es la posición -PERIODO-1, no -PERIODO.
+    """
+    return y.iloc[-PERIODO - 1] + z if OBJETIVO == "dif12" else z
 
 
 def tabla_supervisada(z):
@@ -170,17 +174,50 @@ def filas_completas(y):
 
 
 def recursivo(ajustado, y, h):
-    """Pronóstico recursivo: cada mes pronosticado se agrega a la serie."""
+    """Pronóstico recursivo: primero se abre la fecha objetivo y luego se predice.
+
+    En cada paso se agrega la fecha siguiente como NaN, se construye con esa
+    fecha la fila de predictores, se predice su dif12 y se reconstruye el nivel
+    sumando el valor de esa misma fecha 12 meses antes. Después se guarda el
+    nivel pronosticado en la celda que estaba vacía.
+    """
     y_trabajo = y.astype(float).copy()
     predicciones = []
     for _ in range(h):
+        fecha = fechas_siguientes(y_trabajo, 1)[0]
+        y_trabajo = pd.concat([y_trabajo, pd.Series([np.nan], index=[fecha])])
         X = tabla_supervisada(objetivo(y_trabajo)).iloc[[-1]]
         z_hat = np.asarray(ajustado.predict(X)).reshape(-1)[0]
         nivel = float(np.asarray(a_nivel(y_trabajo, np.array([z_hat])))[0])
         predicciones.append(nivel)
-        fecha = fechas_siguientes(y_trabajo, 1)[0]
-        y_trabajo = pd.concat([y_trabajo, pd.Series([nivel], index=[fecha])])
+        y_trabajo.loc[fecha] = nivel
     return np.asarray(predicciones)
+
+
+def comprobar_recursivo(serie):
+    """Un origen en diciembre debe pronosticar enero con rezago 1 de diciembre."""
+    entrenamiento = serie.iloc[-36:]          # termina en diciembre
+    meses = pd.date_range(entrenamiento.index[-1], periods=2, freq="MS")[1:]
+    filas = []
+
+    class ModeloPrueba:
+        def predict(self, X):
+            filas.append(X.iloc[-1].copy())
+            return np.zeros(len(X))
+
+    pronostico = recursivo(ModeloPrueba(), entrenamiento, 1)
+    primera = filas[0]
+    enero, diciembre = meses[0], entrenamiento.index[-1]
+    z_diciembre = objetivo(entrenamiento).iloc[-1]
+    assert primera.name == enero, "la primera fila no es la fecha objetivo"
+    assert int(primera["mes"]) == enero.month, "la primera fila no es enero"
+    assert np.isclose(primera["rezago_1"], z_diciembre), \
+        "rezago_1 no es la diferencia de diciembre"
+    assert np.isclose(pronostico[0], entrenamiento.iloc[-12]), \
+        "el nivel no usa la misma fecha del año anterior"
+    print(f"  recursivo: primera fila {enero:%Y-%m} con rezago_1 de "
+          f"{diciembre:%Y-%m} ({z_diciembre:.2f}) y nivel de "
+          f"{entrenamiento.index[-12]:%Y-%m}")
 
 
 def con_tabla(fabrica):
@@ -571,6 +608,7 @@ def main():
     print("2. Tabla supervisada")
     try:
         comprobar_sin_fuga(serie)
+        comprobar_recursivo(serie)
         conteo_filas_supervisadas(serie)
         tabla_lista = True
     except NotImplementedError as error:
