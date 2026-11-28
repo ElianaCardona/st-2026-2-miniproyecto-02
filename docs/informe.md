@@ -29,40 +29,48 @@ vacíos`. `comun.py` no se modificó.
 
 ## 2. La tabla supervisada
 
-La tabla tiene 21 columnas: 12 rezagos, el mes civil con su par seno/coseno y
-seis estadísticas de ventana (media y desviación móvil de 3, 12 y 24 meses).
-Con $z_t=y_t-y_{t-12}$:
+Cada fila corresponde a un mes que se quiere pronosticar. La tabla
+contiene 21 predictores y el objetivo se guarda por separado.
+
+| Grupo | Columnas | Cantidad | Qué representan |
+|---|---|---:|---|
+| Rezagos | `rezago_1` a `rezago_12` | 12 | Diferencias estacionales de los 12 meses anteriores. |
+| Calendario | `mes`, `mes_sin`, `mes_cos` | 3 | Mes que se pronostica y su representación cíclica mediante seno y coseno. |
+| Medias móviles | `media_3`, `media_12`, `media_24` | 3 | Promedios de la diferencia estacional en los 3, 12 y 24 meses anteriores. |
+| Desviaciones estándar móviles | `desv_3`, `desv_12`, `desv_24` | 3 | Dispersión de la diferencia estacional en esas mismas ventanas. |
+| **Total de predictores** | | **21** | |
+
+El objetivo `dif12` es la diferencia entre las ventas de un mes y las
+del mismo mes del año anterior:
 
 $$
-\text{rezago}_k=z_{t-k},\quad k=1,\ldots,12;
-\qquad
-\text{mes}=m_t,\quad
-\text{mes\_sin}=\sin\frac{2\pi m_t}{12},\quad
-\text{mes\_cos}=\cos\frac{2\pi m_t}{12};
+z_t = y_t - y_{t-12}
 $$
 
+Para la fila del mes $t$, el rezago $k$ es $z_{t-k}$. Las variables
+`mes_sin` y `mes_cos` se calculan como el seno y el coseno de
+$2\pi m_t/12$, donde $m_t$ es el número del mes.
+
+Las medias y desviaciones móviles se calculan sobre `z.shift(1)`.
+Por eso, la ventana de la fila $t$ termina en $t-1$. La prueba del
+guion suma 1.000 al objetivo de cada fecha y comprueba que los
+predictores de esa misma fila permanezcan iguales. El escalador se
+ajusta con los datos de entrenamiento de cada origen.
+
+El pronóstico es recursivo. Primero se crea la fila del mes siguiente
+con sus predictores y se pronostica su diferencia estacional. Para
+recuperar el nivel de ventas, se suma el valor de ese mismo mes
+del año anterior:
+
 $$
-\text{media}_w(t)=\frac{1}{w}\sum_{i=1}^{w}z_{t-i},\qquad
-\text{desv}_w(t)=\sqrt{\frac{1}{w-1}\sum_{i=1}^{w}
-\left(z_{t-i}-\text{media}_w(t)\right)^2},
-\quad w\in\{3,12,24\}.
+\hat{y}_t = y_{t-12} + \hat{z}_t
 $$
 
-Las ventanas se calculan sobre `z.shift(1)`: la fila $t$ solo ve hasta $t-1$.
-Se aprende `dif12` para quitar el ciclo anual del objetivo; la vuelta al nivel
-es $\hat y_t=y_{t-12}+\hat z_t$. La prueba de fuga cambia cada mes en $+1000$
-y verifica que su fila no cambia: el guion imprime `sin fuga: 120 filas
-verificadas una a una`.
-
-El pronóstico recursivo quedó corregido: en cada paso se agrega primero la
-fecha siguiente como NaN, se construye con esa fecha la fila de predictores,
-se predice su `dif12` y se reconstruye el nivel con el valor de esa misma fecha
-12 meses antes —la posición `-13` de la serie ya extendida—. Después se guarda
-el nivel pronosticado en la celda vacía y se continúa. La comprobación del guion
-es `recursivo: primera fila 2026-01 con rezago_1 de 2025-12 (5284.95) y nivel
-de 2025-01`: un origen en diciembre pronostica enero con el `rezago_1` de
-diciembre, no con el mes del origen. El escalador se ajusta dentro de cada
-origen.
+El nivel pronosticado se incorpora a la serie para construir los
+predictores del siguiente paso. El guion comprueba, por ejemplo, que
+la fila de enero de 2026 usa como `rezago_1` la diferencia estacional
+de diciembre de 2025 (5.284,95) y recupera el nivel con las ventas de
+enero de 2025.
 
 ## 3. Aprendizaje automático
 
